@@ -2346,6 +2346,69 @@ class core_course_renderer extends plugin_renderer_base {
 
         return $output;
     }
+
+    public function frontpagebyrole($role) {
+        global $CFG, $SITE;
+
+        $output = '';
+
+        $frontpagerole = 'frontpage'.$role;
+        if (isset($CFG->{$frontpagerole})) {
+            $frontpagelayout = $CFG->{$frontpagerole};
+        } else {
+            return $output;
+        }
+
+        foreach (explode(',', $frontpagelayout) as $v) {
+            switch ($v) {
+                // Display the main part of the front page.
+                case FRONTPAGENEWS:
+                    if ($SITE->newsitems) {
+                        // Print forums only when needed.
+                        require_once($CFG->dirroot .'/mod/forum/lib.php');
+                        if (($newsforum = forum_get_course_forum($SITE->id, 'news')) &&
+                            ($forumcontents = $this->frontpage_news($newsforum))) {
+                            $newsforumcm = get_fast_modinfo($SITE)->instances['forum'][$newsforum->id];
+                            $output .= $this->frontpage_part('skipsitenews', 'site-news-forum',
+                                $newsforumcm->get_formatted_name(), $forumcontents);
+                        }
+                    }
+                    break;
+
+                case FRONTPAGEENROLLEDCOURSELIST:
+                    $mycourseshtml = $this->frontpage_my_courses();
+                    if (!empty($mycourseshtml)) {
+                        $output .= $this->frontpage_part('skipmycourses', 'frontpage-course-list',
+                            get_string('mycourses'), $mycourseshtml);
+                    }
+                    break;
+
+                case FRONTPAGEALLCOURSELIST:
+                    $availablecourseshtml = $this->frontpage_available_courses();
+                    $output .= $this->frontpage_part('skipavailablecourses', 'frontpage-available-course-list',
+                        get_string('availablecourses'), $availablecourseshtml);
+                    break;
+
+                case FRONTPAGECATEGORYNAMES:
+                    $output .= $this->frontpage_part('skipcategories', 'frontpage-category-names',
+                        get_string('categories'), $this->frontpage_categories_list());
+                    break;
+
+                case FRONTPAGECATEGORYCOMBO:
+                    $output .= $this->frontpage_part('skipcourses', 'frontpage-category-combo',
+                        get_string('courses'), $this->frontpage_combo_list());
+                    break;
+
+                case FRONTPAGECOURSESEARCH:
+                    $output .= $this->box($this->course_search_form(''), 'd-flex justify-content-center');
+                    break;
+
+            }
+            $output .= '<br />';
+        }
+
+        return $output;
+    }
 }
 
 /**
