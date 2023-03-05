@@ -118,21 +118,36 @@ if (!empty($CFG->customfrontpageinclude)) {
 // Include course AJAX.
 include_course_ajax($SITE, $modnamesused);
 
-echo $courserenderer->frontpage();
-
-if ($editing && has_capability('moodle/course:create', context_system::instance())) {
-    echo $courserenderer->add_new_course_button();
-}
+//Менеджер > Вчитель > Студент > Залогінений користувач.
+$sorted = [
+    'manager' => 0,
+    'editingteacher' => 0,
+    'student' => 0,
+];
 
 $roles = $DB->get_records_sql('SELECT DISTINCT r.* FROM {role} r
 inner join {role_assignments} ra on r.id = ra.roleid
 inner join moodle.mdl_user u on ra.userid = u.id
 where ra.userid = ? and u.deleted = ? and u.confirmed = ? order by r.id', array($USER->id, 0, 1));
 
-$out = '';
 foreach ($roles as $role) {
-    $out .= $courserenderer->frontpagebyrole($role->shortname);
+    if (isset($sorted[$role->shortname])) {
+        $sorted[$role->shortname] ++;
+    }
 }
-echo $out;
+
+$use_role = '';
+foreach ($sorted as $role => $count) {
+    if ($count > 0) {
+        $use_role = $role;
+        break;
+    }
+}
+
+echo ($use_role != '') ? $courserenderer->frontpagebyrole($use_role) : $courserenderer->frontpage();
+
+if ($editing && has_capability('moodle/course:create', context_system::instance())) {
+    echo $courserenderer->add_new_course_button();
+}
 
 echo $OUTPUT->footer();
